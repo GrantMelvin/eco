@@ -95,6 +95,16 @@ libname casuser cas caslib=casuser;
 /*     headerout_overwrite; */
 /* run; quit; */
 
+/* Get rows of table */
+/* proc http */
+/*     url="&BASE_URI/rowSets/tables/test_e2e_1/rows" */
+/*     method='GET' */
+/*     oauth_bearer=sas_services */
+/*     out=resp */
+/*     headerout=resp_hdr */
+/*     headerout_overwrite; */
+/* run; quit; */
+
 %let server_name=%sysfunc(urlencode(cas-shared-default));
 %let caslibs_name=%sysfunc(urlencode(CASUSER(grmelv)));
 %let table_name=%sysfunc(urlencode(ABT_DEMO.sashdat));
@@ -110,11 +120,20 @@ libname casuser cas caslib=casuser;
 /* run; quit; */
 
 
+proc http 
+    url="&BASE_URI/casRowSets/servers/cas-shared-default/caslibs/CASUSER(grmelv)/tables/TEST_E2E_1/rows?start=0&limit=1086"
+    method='GET'
+    oauth_bearer=sas_services
+	out=resp
+    headerout=resp_hdr
+    headerout_overwrite;
+run; quit;
+
 /* proc http  */
-/*     url="&BASE_URI/catalog/statistics" */
+/*     url="&BASE_URI/casManagement/servers/cas-shared-default/caslibs/CASUSER(grmelv)/tables/TEST_E2E_1/columns?start=0&limit=892" */
 /*     method='GET' */
 /*     oauth_bearer=sas_services */
-/* 	out=resp */
+/*     out=resp */
 /*     headerout=resp_hdr */
 /*     headerout_overwrite; */
 /* run; quit; */
