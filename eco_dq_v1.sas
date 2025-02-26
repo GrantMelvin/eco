@@ -286,7 +286,17 @@
 	run;
 	
 	%put Instance ID: &insance_id;
-	/* TODO: Get the instance_id dynamically into the queryString */
+
+	%let raw_query = '{
+    "version": 1,
+    "query": "match (t {id: \"9a505a5e-22c0-44ac-87d4-4d81ae7155f2\" })-[r:dataSetDataFields]->(col) 
+                 match (col)-[s:semanticClassifications]->(c) 
+                 match (col)<-[rt:termAsset]-(ta) 
+                 match (col)-[r:topNCollectionsForDataField|bottomNCollectionsForDataField|fieldPatternCollectionsForDataField]->(e) 
+                 return col,s,c,rt,ta,r,e"
+}';
+
+	/* TODO: Dynamically place the instance_id into the string */
 	
     /* Execute HTTP request */
     proc http 
@@ -294,14 +304,7 @@
         method='POST'
         oauth_bearer=sas_services
         out=resp
-        in='{
-        "version": 1,
-        "query": "match (t {id: \"c5b13bfb-4e9a-aa41-a9f3-723b30615b32\" })-[r:dataSetDataFields]->(col) 
-                 match (col)-[s:semanticClassifications]->(c) 
-                 match (col)<-[rt:termAsset]-(ta) 
-                 match (col)-[r:topNCollectionsForDataField|bottomNCollectionsForDataField|fieldPatternCollectionsForDataField]->(e) 
-                 return col,s,c,rt,ta,r,e"
-    }'
+        in=&raw_query
         headerout=resp_hdr
         headerout_overwrite;
         headers 'Content-Type' = 'application/vnd.sas.metadata.instance.query+json';
@@ -337,7 +340,6 @@
 
 %mend get_statistics;
 
-/* TODO: Get rid of everything except summary and use the statistics instead */
 /* Generate a table report on characteristics of the analysis from bots */
 %macro generate_report(table, caslib, doc_path);
     /* Uppercase the table name for consistency */
@@ -345,12 +347,9 @@
     %let BASE_URI=%sysfunc(getoption(servicesbaseurl));    
     %let encoded_table=%sysfunc(urlencode(&table));
     %let encoded_caslib=%sysfunc(urlencode(&caslib));
-
-
     /* Create temporary files for response handling */
     filename resp temp;
     filename resp_hdr temp;
-
 	/* Get the total row count for this table */
 	proc http
 	    url="&BASE_URI/rowSets/tables/cas~fs~cas-shared-default~fs~&encoded_caslib~fs~&encoded_table/rows"
@@ -360,7 +359,6 @@
 	    headerout=resp_hdr
 	    headerout_overwrite;
 	run; quit;
-
 	libname resp json fileref=resp;
 	
 	/* Extract root.count using JSON libname */
@@ -370,7 +368,7 @@
 	    call symputx('total_count', total_count); /* Store in macro variable */
   	run;
 	%put Total Count: &total_count; /* Log the value */
-
+	
 	/* Create a new dataset containing only features with completenessPercent < 50 */
 	data CompletenessReport;
 	  set work.final_entities;
@@ -382,19 +380,41 @@
 	  type = 'Completeness';
 	run;
 	
+	/* Check if hasOutliers exists in the dataset */
+	proc contents data=work.final_entities out=contents noprint; run;
+	
+	%let has_outlier_var = 0;
+	data _null_;
+	  set contents;
+	  if upcase(name) = 'HASOUTLIERS' then call symputx('has_outlier_var', 1);
+	run;
+	
 	/* Create a new dataset containing only features with outlierPercent > 10 */
-	data OutlierReport;
-	  set work.final_entities;
-	  outlierPercent = (nOutliers / &total_count) * 100;
-  	  message = catx('', 
+	%if &has_outlier_var = 1 %then %do;
+	  data OutlierReport;
+	    set work.final_entities;
+	    outlierPercent = (nOutliers / &total_count) * 100;
+    	message = catx('', 
 	            "Contains",
 	            trim(put(outlierPercent, best8.2)),
 	            "% of values as outliers.");
-	  where hasOutliers = 1;
-	  rename nOutliers=outlierCount;
-	  type = 'Outlier';
-	run;
-
+	    where hasOutliers = 1;
+	    rename nOutliers=outlierCount;
+	    type = 'Outlier';
+	  run;
+	%end;
+	%else %do;
+	  /* Create empty outlier report if hasOutliers doesn't exist */
+	  data OutlierReport;
+	    length name $256 type $50 message $200;
+	    ordinal_entities = .;
+	    outlierCount = .;
+	    outlierPercent = .;
+	    call missing(name, type, message);
+	    stop;
+	  run;
+	%end;
+	
 	/* Create a new dataset containing only features with mismatchedPercent > 25 */
 	data mismatchReport;
 	    set work.final_entities;
@@ -405,37 +425,36 @@
 		              "% of values as incorrect type.");
 		type = 'Mismatched';
 	run;
-
-	proc print data=OutlierReport noobs;
-	    title "Outliers > 10%";
-	    var ordinal_entities name outlierCount outlierPercent message;
-		where outlierPercent > 10;
-	run;
-
+	
+	%if &has_outlier_var = 1 %then %do;
+	  proc print data=OutlierReport noobs;
+	      title "Outliers > 10%";
+	      var ordinal_entities name outlierCount outlierPercent message;
+		  where outlierPercent > 10;
+	  run;
+	%end;
+	
   	proc print data=CompletenessReport noobs;
      	title "Completeness < 50%";
 		var ordinal_entities name missingCount completenessPercent message;
   	run;
-
+	
 	proc print data=mismatchReport noobs;
      	title "Mismatched > 25%";
 		var ordinal_entities name mismatchedCount mismatchedPercent message;
 		where mismatchedPercent > 25;
   	run;
-
-/*   Combine the three reports into one */
-  data CombinedReport;
-    set CompletenessReport OutlierReport MismatchReport;
-  run;
-
-	/* Combine the three reports into one dataset */
+	
+	/* Combine the three reports using SQL */
 	proc sql;
 	  create table CombinedReport as
+	    %if &has_outlier_var = 1 %then %do;
 	    /* Outlier rows */
 	    select name, 'Outlier' as error_type, message
 	    from OutlierReport
 	    where outlierPercent > 10
 	    union all
+	    %end;
 	    /* Completeness rows */
 	    select name, 'Completeness' as error_type, message
 	    from CompletenessReport
@@ -455,11 +474,10 @@
 	  run;
 	ods pdf close;
 	
-	
 %mend generate_report;
 
-/* TODO: Do some changes to the given variable within the table */
-%macro first_correction(name, table, caslib);
+/* Impute in a way defined by the user */
+%macro first_correction(table, caslib, impute_on=impute_on, impute_method=impute_method);
 
     %let table=%upcase(&table);
     %let BASE_URI=%sysfunc(getoption(servicesbaseurl));    
@@ -469,72 +487,20 @@
 	filename resp temp;
 	filename resp_hdr temp;
 	filename payload temp;
-	
-/* 	for filtered get */
-	data _null_;
-	    file payload;
-	    put 'PLA_MONTH < 100'; 
-	run;
 
-/* 		for filtered get */
-/* 	proc http */
-/* 	    url="&BASE_URI/casRowSets/servers/cas-shared-default/caslibs/&encoded_caslib/tables/&encoded_table/rows" */
-/* 	    method='POST'  */
-/* 	    in=payload  */
-/* 	    oauth_bearer=sas_services */
-/* 	    out=resp */
-/* 	    headerout=resp_hdr */
-/* 	    verbose;  */
-/* 	    headers */
-/* 	        'Accept' = 'application/json, application/vnd.sas.collection+json' */
-/* 	        'Content-Type' = 'text/plain';  */
-/* 	run; */
-
-	proc http
-	    url="&BASE_URI/casRowSets/servers/cas-shared-default/caslibs/&encoded_caslib/tables/&encoded_table/rows?start=0&limit=100"
-	    method='POST' 
-	    in=payload 
+	%put Impute on: &impute_on;
+	%put Method: &impute_method;
+		
+	/* Get columns from that table*/
+	proc http 
+	    url="&BASE_URI/casManagement/servers/cas-shared-default/caslibs/&encoded_caslib/tables/&encoded_table/columns?start=0&limit=1000"
+	    method='GET'
 	    oauth_bearer=sas_services
 	    out=resp
 	    headerout=resp_hdr
-	    verbose; 
-	    headers
-	        'Accept' = 'application/json, application/vnd.sas.collection+json'
-	        'Content-Type' = 'text/plain'; 
-	run;
-
-/* 	for delete */
-/* 	data _null_; */
-/* 	    file payload; */
-/* 	    put '{'; */
-/* 	    put '  "version": 1,'; 	     */
-/* 	    put '  "where": PLA_MONTH < 10';  */
-/* 	    put '}'; */
-/* 	run; */
-/*  */
-/* 	data _null_; */
-/* 	    infile payload; */
-/* 	    input; */
-/* 	    put _infile_; */
-/* 	run; */
-/*  */
-/* 	proc http */
-/* 	    url="&BASE_URI/casRowSets/servers/cas-shared-default/caslibs/&encoded_caslib/tables/&encoded_table/rows" */
-/* 	    method='POST' */
-/* 	    in=payload */
-/* 	    oauth_bearer=sas_services */
-/* 	    out=resp */
-/* 	    headerout=resp_hdr */
-/* 	    verbose; */
-/*         headers 'Content-Type' = 'application/vnd.sas.cas.row.delete.request+json'; */
-/*  		headers 'Accept' = 'application/vnd.sas.cas.row.delete.response+json, application/json, application/vnd.sas.collection+json, application/vnd.sas.error+json'; */
-/* 	run; */
-/*  */
-/* 	data _null_; */
-/* 	    infile resp; */
-/* 	    input; */
-/* 	    put _infile_; */
-/* 	run; */
+	    headerout_overwrite;
+	run; quit;
+	
 
 	libname resp json fileref=resp;
 

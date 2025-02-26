@@ -10,13 +10,14 @@
 %let test_file_1 = &basepath/test_files/test.sas7bdat;
 %let test_file_2 = &basepath/test_files/metadata_test.csv;
 %let test_file_3 = &basepath/test_files/Financial_Sample.xlsx;
+%let test_file_4 = &basepath/test_files/all-approved_oncology_drugs.xlsx;
 
-%run_e2e(
-	file=&test_file_3,
-    caslib=CASUSER(grmelv),
-    table=test_e2e_3,
-	bot=test-bot-e2e_3,
-	doc_path=&basepath/reports
+
+%first_correction(
+	test_e2e_1, 
+	CASUSER(grmelv),
+	impute_on=KIL_END_DATE,
+	impute_method=mean
 );
 /* Uploads files to CAS */
 /* Parameters:
@@ -62,7 +63,7 @@
 %generate_report(
 	test_e2e_1,
 	CASUSER(grmelv),
-	/export/sas-viya/homes/grmelv/casuser/dq_module/reports
+	&basepath/reports
 );
 
 /* Produces a table that drops the rows if a specified variable is not present(as if it is a target)*/
@@ -71,11 +72,12 @@
 	table 	 = the table you want to evaluate
 	caslib 	 = the caslib that the table is located in
 */
-/* %first_correction( */
-/* 	zone, */
-/* 	testing_table,  */
-/* 	CASUSER(grmelv) */
-/* ); */
+%first_correction(
+	testing_table, 
+	CASUSER(grmelv),
+	impute=KIL_END_DATE,
+	method=mean
+);
 
 /* Runs the entire script E2E*/
 /* Parameters:
@@ -87,8 +89,7 @@
 %run_e2e(
 	file=&test_file_1,
     caslib=CASUSER(grmelv),
-    table=test_e2e_1,
+    table=test_e2e_1
 	bot=test-bot-e2e_1,
-	sastable=work.final_entities,
-	path=/export/sas-viya/homes/grmelv/casuser
+	doc_path=&basepath/reports
 );
