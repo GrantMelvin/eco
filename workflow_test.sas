@@ -1,21 +1,22 @@
-/* Script path */
-%include "/export/sas-viya/homes/grmelv/casuser/ECO/eco_dq_v1.sas";
+/* Get the current directory path */
+%let fullpath = &_SASPROGRAMFILE;
+%let basepath = %substr(&fullpath, 1, %index(&fullpath, workflow_test.sas) - 2);
+%put &basepath;
 
-%let test_file_1 = /export/sas-viya/homes/grmelv/casuser/ECO/test_files/test.sas7bdat;
-%let test_file_2 = /export/sas-viya/homes/grmelv/casuser/ECO/test_files/metadata_test.csv;
-%let test_file_3 = /export/sas-viya/homes/grmelv/casuser/ECO/test_files/Financial_Sample.xlsx;
+/* Data Quality Module */
+%include "&basepath/eco_dq_v1.sas";
 
-%generate_report(
-	test_e2e_1,
-	CASUSER(grmelv),
-	/export/sas-viya/homes/grmelv/casuser/ECO/reports
-);
+/* Test files for analysis */
+%let test_file_1 = &basepath/test_files/test.sas7bdat;
+%let test_file_2 = &basepath/test_files/metadata_test.csv;
+%let test_file_3 = &basepath/test_files/Financial_Sample.xlsx;
+
 %run_e2e(
-	file=&test_file_1,
+	file=&test_file_3,
     caslib=CASUSER(grmelv),
-    table=test_e2e_1,
-	bot=test-bot-e2e_1,
-	doc_path=/export/sas-viya/homes/grmelv/casuser/ECO/reports
+    table=test_e2e_3,
+	bot=test-bot-e2e_3,
+	doc_path=&basepath/reports
 );
 /* Uploads files to CAS */
 /* Parameters:
