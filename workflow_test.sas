@@ -1,16 +1,21 @@
 /* Script path */
-%include "/export/sas-viya/homes/grmelv/casuser/dq_module/eco_dq_v1.sas";
+%include "/export/sas-viya/homes/grmelv/casuser/ECO/eco_dq_v1.sas";
 
-%let test_file_1 = /export/sas-viya/homes/grmelv/casuser/dq_module/test_files/test.sas7bdat;
-%let test_file_2 = /export/sas-viya/homes/grmelv/casuser/dq_module/test_files/metadata_test.csv;
-%let test_file_3 = /export/sas-viya/homes/grmelv/casuser/dq_module/test_files/Financial_Sample.xlsx;
+%let test_file_1 = /export/sas-viya/homes/grmelv/casuser/ECO/test_files/test.sas7bdat;
+%let test_file_2 = /export/sas-viya/homes/grmelv/casuser/ECO/test_files/metadata_test.csv;
+%let test_file_3 = /export/sas-viya/homes/grmelv/casuser/ECO/test_files/Financial_Sample.xlsx;
 
+%generate_report(
+	test_e2e_1,
+	CASUSER(grmelv),
+	/export/sas-viya/homes/grmelv/casuser/ECO/reports
+);
 %run_e2e(
 	file=&test_file_1,
     caslib=CASUSER(grmelv),
     table=test_e2e_1,
 	bot=test-bot-e2e_1,
-	doc_path=/export/sas-viya/homes/grmelv/casuser/dq_module/reports
+	doc_path=/export/sas-viya/homes/grmelv/casuser/ECO/reports
 );
 /* Uploads files to CAS */
 /* Parameters:

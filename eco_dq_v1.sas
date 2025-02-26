@@ -19,7 +19,7 @@
 			%let tablename = %upcase(&tablename);
 
             %if %upcase(&filetype) = CSV %then %do;
-                load casdata="dq_module/test_files/&filename"       
+                load casdata="ECO/test_files/&filename"       
                 importoptions=(filetype="csv" 
                                getnames="true" 
                                encoding="latin1")
@@ -28,7 +28,7 @@
                 replace;
             %end;
             %else %if %upcase(&filetype) = XLSX or %upcase(&filetype) = XLS %then %do;  
-				load casdata="dq_module/test_files/&filename"   
+				load casdata="ECO/test_files/&filename"   
                 importoptions=(filetype="excel" 
                                getnames="true")
                 outcaslib="&caslib" 
