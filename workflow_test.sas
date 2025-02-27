@@ -2,7 +2,7 @@
 %let fullpath = &_SASPROGRAMFILE;
 %let basepath = %substr(&fullpath, 1, %index(&fullpath, workflow_test.sas) - 2);
 %put &basepath;
-
+%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
 /* Data Quality Module */
 %include "&basepath/eco_dq_v1.sas";
 
@@ -11,6 +11,7 @@
 %let test_file_2 = &basepath/test_files/metadata_test.csv;
 %let test_file_3 = &basepath/test_files/Financial_Sample.xlsx;
 %let test_file_4 = &basepath/test_files/all-approved_oncology_drugs.xlsx;
+%let test_file_5 = &basepath/test_files/qol_life_data.xlsx;
 
 /* Uploads and promotes a file to CAS */
 /* Parameters:

@@ -55,8 +55,8 @@
 
     %let bot = &table.-ECO-BOT;
     %let encoded_table=%sysfunc(urlencode(&table));
-	%let encoded_server=%sysfunc(getoption(&server));  
-	%let encoded_provider=%sysfunc(getoption(&provider));  
+    %let encoded_server=%sysfunc(urlencode(&server));  
+    %let encoded_provider=%sysfunc(urlencode(&provider));  
     %let encoded_bot=%sysfunc(urlencode(&bot));
 	%let encoded_caslib=%sysfunc(urlencode(&caslib));
 
@@ -369,8 +369,8 @@
  
     %let encoded_table=%sysfunc(urlencode(&table));
     %let encoded_caslib=%sysfunc(urlencode(&caslib));
-	%let encoded_server=%sysfunc(getoption(&server));  
-	%let encoded_provider=%sysfunc(getoption(&provider)); 
+	%let encoded_server=%sysfunc(urlencode(&server));  
+	%let encoded_provider=%sysfunc(urlencode(&provider)); 
 
     /* Create temporary files for response handling */
     filename resp temp;
@@ -508,8 +508,8 @@
 %macro first_correction(BASE_URI, table, caslib, provider, server, impute_on=impute_on, impute_method=impute_method); 
     %let encoded_table=%sysfunc(urlencode(&table));
     %let encoded_caslib=%sysfunc(urlencode(&caslib));
-	%let encoded_provider=%sysfunc(getoption(&provider)); 
-	%let encoded_server=%sysfunc(getoption(&server));   
+	%let encoded_provider=%sysfunc(urlencode(&provider)); 
+	%let encoded_server=%sysfunc(urlencodegetg(&server));   
 
 	filename resp temp;
 	filename resp_hdr temp;
@@ -640,9 +640,8 @@
 	
 %mend first_correction;
 
-
 /* E2E Process */
-%macro run_e2e(file=file, caslib=caslib, table=table, bot=bot, doc_path=path, provider=provider, server=server);
+%macro run_e2e(file=file, provider=provider, server=server, caslib=caslib, table=table, doc_path=path);
 	%let table=%upcase(&table);
 	%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
 
@@ -651,7 +650,6 @@
     %put NOTE: file=&file;
     %put NOTE: caslib=&caslib;
     %put NOTE: table=&table;
-    %put NOTE: bot=&bot;
 	%put NOTE: doc_path=&doc_path;
 	%put NOTE: provider=&provider;
 	%put NOTE: server=&server;
