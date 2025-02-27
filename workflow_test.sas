@@ -12,17 +12,6 @@
 %let test_file_3 = &basepath/test_files/Financial_Sample.xlsx;
 %let test_file_4 = &basepath/test_files/all-approved_oncology_drugs.xlsx;
 
-%get_statistics(
-	test_e2e_1, 
-	CASUSER(grmelv)
-);
-
-%first_correction(
-	test_e2e_1, 
-	CASUSER(grmelv),
-	impute_on=KIL_END_DATE,
-	impute_method=mean
-);
 /* Uploads files to CAS */
 /* Parameters:
 	file   = the file you want to perform analysis on
@@ -53,7 +42,7 @@
 	caslib 	 = the caslib that the table is located in
 */
 %get_statistics(
-	testing_table_new_new, 
+	test_e2e_1, 
 	CASUSER(grmelv)
 );
 

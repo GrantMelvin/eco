@@ -241,22 +241,25 @@
 
 /* Get statistics from the DQ part of the information catalog */
 %macro get_statistics(table, caslib);
+	%put at get statistics;
     /* Uppercase the table name for consistency */
     %let table=%upcase(&table);
     %let BASE_URI=%sysfunc(getoption(servicesbaseurl));    
     %let encoded_table=%sysfunc(urlencode(&table));
     %let encoded_caslib=%sysfunc(urlencode(&caslib));
 
-	%put &instance is the instance;
+	%put Table: &table;
+	%put Encoded Table: &encoded_table;
 
     /* Create temporary files for response handling */
     filename resp temp;
     filename resp_hdr temp;
 	filename inst_id temp;
+	filename jsonfile temp;
 
-	/* Extracts the instance ID into a variable */
+	/* Gets the maximum count that we need to look for the instance in */
 	proc http 
-	    url="&BASE_URI/catalog/search?q=&encoded_table"
+	    url="&BASE_URI/catalog/search?q=&encoded_table" /*Fix*/
 	    method='GET'
 	    oauth_bearer=sas_services
 	    out=resp
@@ -266,90 +269,89 @@
 		headers 'Accept' = 'application/json, application/vnd.sas.metadata.search.collection+json, application/vnd.sas.error+json';
 	run; quit;
 
-	filename jsonfile temp;
+	libname resp json fileref=resp;
 
-	/* Copy resp to JSON */
-	data _null_;
-	    infile resp;
-	    file jsonfile;
-	    input;
-	    put _infile_;
-	run;
-	
-	/* Use JSON libname engine */
-	libname myjson json fileref=jsonfile;
+  	data _null_;
+    	set resp.root; 
+	    total_search_count = count; 
+	    call symputx('total_search_count', total_search_count);
+  	run;
+
+	/* Extracts the instance ID for target table */
+	proc http 
+	    url="&BASE_URI/catalog/search?start=0&limit=&total_search_count&q=&encoded_table" /*Fix*/
+	    method='GET'
+	    oauth_bearer=sas_services
+	    out=resp
+	    headerout=resp_hdr
+	    headerout_overwrite;
+		headers 'Content-Type' = 'application/json';
+		headers 'Accept' = 'application/json, application/vnd.sas.metadata.search.collection+json, application/vnd.sas.error+json';
+	run; quit;
+
+	libname resp json fileref=resp;
+
+	%put after catalog instance search.;
 	
 	/* Extract the id where name matches table */
 	data _null_;
-	    set myjson.items;
-	    where name = "&table"; /* Ensure case insensitivity */
-	    call symputx('instance_id', id); /* Store the id in a macro variable */
+	    set resp.items;
+	    if upcase(name) = upcase("&table") then
+	        call symputx('instance_id', id);
 	run;
 	
 	%put Instance ID: &instance_id;
 	
-/* 	data _null_; */
-/* 	  file inst_id; */
-/* 	  if _n_=1 then do; */
-/* 	  put '{'; */
-/* 	  put '"version": 1,'; */
-/* 	  put '"query": "match (t {id: \"' "&instance_id" '\" })-[r:dataSetDataFields]->(col)' @; */
-/* 	  put '           match (col)-[s:semanticClassifications]->(c)' @; */
-/* 	  put '           match (col)<-[rt:termAsset]-(ta)' @; */
-/* 	  put '           match (col)-[r:topNCollectionsForDataField|bottomNCollectionsForDataField|fieldPatternCollectionsForDataField]->(e)' @; */
-/* 	  put '           return col,s,c,rt,ta,r,e"'; */
-/* 	  put '}'; */
-/* 	  end; */
-/* 	run; */
-
-	%let raw_query = '{
-    "version": 1,
-    "query": "match (t {id: \" &instance_id \" })-[r:dataSetDataFields]->(col) 
-                 match (col)-[s:semanticClassifications]->(c) 
-                 match (col)<-[rt:termAsset]-(ta) 
-                 match (col)-[r:topNCollectionsForDataField|bottomNCollectionsForDataField|fieldPatternCollectionsForDataField]->(e) 
-                 return col,s,c,rt,ta,r,e"
-}';
-
-
-
-	/* TODO: Dynamically place the instance_id into the string */
+	/*	prep query */
+	data _null_;
+	  file inst_id;
+	  if _n_=1 then do;
+	 	put '{';
+	 	put '"version": 1,';
+	 	put '"query": "match (t {id: \"' "&instance_id" '\" })-[r:dataSetDataFields]->(col)' @;
+	 	put 'match (col)-[s:semanticClassifications]->(c)' @;
+	 	put 'match (col)<-[rt:termAsset]-(ta)' @;
+	 	put 'match (col)-[r:topNCollectionsForDataField|bottomNCollectionsForDataField|fieldPatternCollectionsForDataField]->(e)' @;
+	 	put 'return col,s,c,rt,ta,r,e"';
+	 	put '}';
+	  end;
+	run;
 	
-    /* Gets the information catalog info */
+	/*     Gets the information catalog info */
     proc http 
         url="&BASE_URI/catalog/instances/"
         method='POST'
         oauth_bearer=sas_services
         out=resp
-        in=&raw_query
+        in=inst_id
         headerout=resp_hdr
         headerout_overwrite;
         headers 'Content-Type' = 'application/vnd.sas.metadata.instance.query+json';
         headers 'Accept' = 'application/json, application/vnd.sas.metadata.instance.archive+json, application/vnd.sas.error+json';
     run;
 
-    /* Process JSON response into SAS table */
+	/*     Process JSON response into SAS table */
     libname resp json fileref=resp;
 
-    /* The stats for each feature */
+	/*     The stats for each feature */
     data work.attributes;
         set resp.entities_attributes;
 		by ordinal_entities;
     run;
 
-	/* The different features names*/
+	/* 	The different features names */
 	data work.entities;
 		set resp.entities;
 		by ordinal_entities;
 		keep name ordinal_entities;
 	run;
 
-	/* Merge on ordinal_entities */
+	/* 	Merge on ordinal_entities */
 	data work.final_entities;
 	    merge work.entities (in=a)
 	          work.attributes (in=b);
 	    by ordinal_entities;
-	    if a and b; /* Keep only matching records */
+	    if a and b;
 	run;
 
 	proc print data=work.final_entities;
