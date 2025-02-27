@@ -3,8 +3,6 @@
 %let basepath = %substr(&fullpath, 1, %index(&fullpath, workflow_test.sas) - 2);
 %put &basepath;
 
-%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
-
 /* Data Quality Module */
 %include "&basepath/eco_dq_v1.sas";
 

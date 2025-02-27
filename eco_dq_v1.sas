@@ -279,6 +279,8 @@
 	    call symputx('total_search_count', total_search_count);
   	run;
 
+	%put Total Search Count: &total_search_count;
+
 	/* Extracts the instance ID for target table */
 	proc http 
 	    url="&BASE_URI/catalog/search?start=0&limit=&total_search_count&q=&encoded_table"
@@ -296,7 +298,11 @@
 	/* Extract the id where name matches table */
 	data _null_;
 	    set resp.items;
-	    if upcase(name) = upcase("&table") then
+	    /* Extract base name without extension for both values */
+	    name_base = scan(upcase(strip(name)), 1, '.');
+	    table_base = scan(upcase(strip("&table")), 1, '.');
+	    
+	    if name_base = table_base then
 	        call symputx('instance_id', id);
 	run;
 	
