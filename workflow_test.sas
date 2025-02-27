@@ -12,19 +12,10 @@
 %let test_file_3 = &basepath/test_files/Financial_Sample.xlsx;
 %let test_file_4 = &basepath/test_files/all-approved_oncology_drugs.xlsx;
 
-%run_e2e(
-	file=&test_file_1,
-	provider=cas,
-	server=cas-shared-default,
-    caslib=CASUSER(grmelv),
-    table=test_e2e_1,
-	doc_path=&basepath/reports
-);
-
 /* Uploads and promotes a file to CAS */
 /* Parameters:
-	file   = file path you want to perform analysis on
-	caslib = target caslib to upload to
+	file   = file path you want to perform analysis on (sas7bdat, csv, xls, xlsx supported)
+	caslib = target caslib to upload to (best with casuser)
 	table  = desired table name for file
 */
 %import_data(

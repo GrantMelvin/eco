@@ -338,13 +338,13 @@
 
     libname resp json fileref=resp;
 
-	/* The stats for each feature */
+	/* The values for each column header */
     data work.attributes;
         set resp.entities_attributes;
 		by ordinal_entities;
     run;
 
-	/* 	The different features names */
+	/* 	The different column header names */
 	data work.entities;
 		set resp.entities;
 		by ordinal_entities;
@@ -635,11 +635,13 @@
 	   rename &rename_list;
 	quit;
 
+	/* TODO: IMPUTE */
+
 	
 %mend first_correction;
 
 
-/* E2E test */
+/* E2E Process */
 %macro run_e2e(file=file, caslib=caslib, table=table, bot=bot, doc_path=path, provider=provider, server=server);
 	%let table=%upcase(&table);
 	%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
