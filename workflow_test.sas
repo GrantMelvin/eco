@@ -12,6 +12,16 @@
 %let test_file_3 = &basepath/test_files/Financial_Sample.xlsx;
 %let test_file_4 = &basepath/test_files/all-approved_oncology_drugs.xlsx;
 
+%run_e2e(
+	file=&test_file_1,
+	provider=cas,
+	server=cas-shared-default,
+    caslib=CASUSER(grmelv),
+    table=test_e2e_1,
+	bot=test-bot-e2e_1,
+	doc_path=&basepath/reports
+);
+
 /* Uploads files to CAS */
 /* Parameters:
 	file   = the file you want to perform analysis on
@@ -31,9 +41,10 @@
 	caslib 	 = the caslib that the table is located in
 */
 %run_bots(
-	test4, 
-	test-bot-test4, 
-	CASUSER(grmelv)
+	test_e2e_1,  
+	CASUSER(grmelv),
+	cas,
+	cas-shared-default
 );
 
 /* Retrieves the information catalog statistics for the given table */
@@ -80,9 +91,12 @@
 	bot      = the name of the bot that you will create to perform the analysis
 */
 %run_e2e(
+	BASE_URI=
 	file=&test_file_1,
+	provider=cas,
+	server=cas-shared-default,
     caslib=CASUSER(grmelv),
-    table=test_e2e_1
+    table=test_e2e_1,
 	bot=test-bot-e2e_1,
 	doc_path=&basepath/reports
 );

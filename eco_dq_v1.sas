@@ -51,19 +51,23 @@
 %mend import_data;
 
 /* Use Information catalog to generate baseline analysis */
-%macro run_bots(table, bot, caslib);
-	%let table=%upcase(&table);
-	%let BASE_URI=%sysfunc(getoption(servicesbaseurl));	
+%macro run_bots(BASE_URI, table, caslib, provider, server);
+
+    %let bot = &table.-ECO-BOT;
     %let encoded_table=%sysfunc(urlencode(&table));
+	%let encoded_server=%sysfunc(getoption(&server));  
+	%let encoded_provider=%sysfunc(getoption(&provider));  
     %let encoded_bot=%sysfunc(urlencode(&bot));
 	%let encoded_caslib=%sysfunc(urlencode(&caslib));
 
 	filename resp     temp;
 	filename resp_hdr temp;
 
+	%put bot: &encoded_bot;
+
 	/* Load table into something from our public caslib */
 	proc http 
-	    url="&BASE_URI/casManagement/servers/cas-shared-default/caslibs/&encoded_caslib/tables/&encoded_table/state?value=loaded"
+	    url="&BASE_URI/casManagement/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/state?value=loaded"
 	    method='PUT'
 	    oauth_bearer=sas_services
 	    out=resp
@@ -80,9 +84,9 @@
 		"{
           ""provider"": ""TABLE-BOT"",
           ""name"": ""&encoded_bot"",
-          ""description"": ""Crawl my data source"",
+          ""description"": ""ECO BOT FOR &table"",
           ""parameters"": {
-            ""datasourceURI"": ""/dataSources/providers/cas/sources/cas-shared-default~fs~&encoded_caslib""
+            ""datasourceURI"": ""/dataSources/providers/&encoded_provider/sources/&encoded_server~fs~&encoded_caslib""
           }
         }"
 	    oauth_bearer=sas_services
@@ -221,10 +225,10 @@
 		in='{
 		  "provider": "TABLE-BOT",
 		  "name": "&encoded_bot",
-		  "description": "Analyze some data source",
+		  "description": "ECO ANALYSIS FOR &table",
 		  "resources": [
 			  {
-			    "uri": "/dataTables/dataSources/cas~fs~cas-shared-default~fs~&encoded_caslib/tables/&encoded_table",
+			    "uri": "/dataTables/dataSources/&encoded_provider~fs~&encoded_server~fs~&encoded_caslib/tables/&encoded_table",
 			    "type": "CASTable"
 			  }
 			],
@@ -240,11 +244,8 @@
 %mend run_bots;
 
 /* Get statistics from the DQ part of the information catalog */
-%macro get_statistics(table, caslib);
-	%put at get statistics;
-    /* Uppercase the table name for consistency */
-    %let table=%upcase(&table);
-    %let BASE_URI=%sysfunc(getoption(servicesbaseurl));    
+%macro get_statistics(BASE_URI, table, caslib);
+ 
     %let encoded_table=%sysfunc(urlencode(&table));
     %let encoded_caslib=%sysfunc(urlencode(&caslib));
 
@@ -360,18 +361,18 @@
 %mend get_statistics;
 
 /* Generate a table report on characteristics of the analysis from bots */
-%macro generate_report(table, caslib, doc_path);
-    /* Uppercase the table name for consistency */
-    %let table=%upcase(&table);
-    %let BASE_URI=%sysfunc(getoption(servicesbaseurl));    
+%macro generate_report(BASE_URI, table, caslib, provider, server, doc_path);
+ 
     %let encoded_table=%sysfunc(urlencode(&table));
     %let encoded_caslib=%sysfunc(urlencode(&caslib));
+	%let encoded_server=%sysfunc(getoption(&server));  
+	%let encoded_provider=%sysfunc(getoption(&provider)); 
     /* Create temporary files for response handling */
     filename resp temp;
     filename resp_hdr temp;
 	/* Get the total row count for this table */
 	proc http
-	    url="&BASE_URI/rowSets/tables/cas~fs~cas-shared-default~fs~&encoded_caslib~fs~&encoded_table/rows"
+	    url="&BASE_URI/rowSets/tables/&encoded_provider~fs~&encoded_server~fs~&encoded_caslib~fs~&encoded_table/rows"
 	    method='GET'
 	    oauth_bearer=sas_services
 	    out=resp
@@ -496,13 +497,12 @@
 %mend generate_report;
 
 /* Impute in a way defined by the user */
-%macro first_correction(table, caslib, impute_on=impute_on, impute_method=impute_method);
-
-    %let table=%upcase(&table);
-    %let BASE_URI=%sysfunc(getoption(servicesbaseurl));    
+%macro first_correction(BASE_URI, table, caslib, provider, server, impute_on=impute_on, impute_method=impute_method); 
     %let encoded_table=%sysfunc(urlencode(&table));
     %let encoded_caslib=%sysfunc(urlencode(&caslib));
-	
+	%let encoded_provider=%sysfunc(getoption(&provider)); 
+	%let encoded_server=%sysfunc(getoption(&server));   
+
 	filename resp temp;
 	filename resp_hdr temp;
 	filename payload temp;
@@ -510,8 +510,9 @@
 	%put Impute on: &impute_on;
 	%put Method: &impute_method;
 
+	/* Used for getting the total row count */
 	proc http
-	    url="&BASE_URI/rowSets/tables/cas~fs~cas-shared-default~fs~&encoded_caslib~fs~&encoded_table/rows"
+	    url="&BASE_URI/rowSets/tables/&encoded_provider~fs~&encoded_server~fs~&encoded_caslib~fs~&encoded_table/rows"
 	    method='GET'
 	    oauth_bearer=sas_services
 	    out=resp
@@ -521,7 +522,7 @@
 
 	libname resp json fileref=resp;
 	
-/* 	Extract root.count using JSON libname */
+	/* 	Extract root.count using JSON libname */
   	data _null_;
     	set resp.root; 
 	    total_row_count = count;
@@ -530,9 +531,9 @@
 
 	%put Total Row Count: &total_row_count; 
 		
-/* 	Get the table rows to impute on */
+	/* 	Get the actual rows */
 	proc http 
-	    url="&BASE_URI/casRowSets/servers/cas-shared-default/caslibs/&caslib/tables/&table/rows?start=0&limit=&total_row_count"
+	    url="&BASE_URI/casRowSets/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/rows?start=0&limit=&total_row_count"
 	    method='GET'
 	    oauth_bearer=sas_services
 		out=resp
@@ -542,7 +543,7 @@
 
 	libname resp json fileref=resp;
 
-/* 	Create a SAS table directly from items.cells JSON response*/
+	/* 	Create a SAS table directly from items.cells JSON response*/
 	data work.rows;
 	  set resp.items_cells;
 	  drop ordinal_items ordinal_cells;
@@ -551,9 +552,10 @@
 	proc print data=work.rows(obs=&total_row_count);
 	  title "&table Rows";
 	run;
-
+	
+	/* Get the column count */
 	proc http 
-	    url="&BASE_URI/casManagement/servers/cas-shared-default/caslibs/CASUSER(grmelv)/tables/TEST_E2E_1/columns"
+	    url="&BASE_URI/casManagement/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/columns"
 	    method='GET'
 	    oauth_bearer=sas_services
 	    out=resp
@@ -563,7 +565,7 @@
 
 	libname resp json fileref=resp;
 	
-/* 	Extract root.count using into the total_col_count */
+	/* 	Extract root.count into the total_col_count */
   	data _null_;
     	set resp.root; 
 	    total_col_count = count; 
@@ -571,9 +573,10 @@
   	run;
 
 	%put Total Col Count: &total_col_count;
-
+	
+	/* Extracts the column content */
 	proc http 
-	    url="&BASE_URI/casManagement/servers/cas-shared-default/caslibs/CASUSER(grmelv)/tables/TEST_E2E_1/columns?start=0&limit=&total_col_count"
+	    url="&BASE_URI/casManagement/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/columns?start=0&limit=&total_col_count"
 	    method='GET'
 	    oauth_bearer=sas_services
 	    out=resp
@@ -583,7 +586,7 @@
 
 	libname resp json fileref=resp;
 
-/* 	Create a SAS table directly from resp.items JSON */
+	/* 	Create a SAS table directly from resp.items JSON */
 	data work.cols;
 	  set resp.items;
 	  keep name;
@@ -593,17 +596,17 @@
 	  title "&table Columns";
 	run;
 	
-	/* Step 1: Get column names from both tables */
+	/* Get column names from both tables */
 	proc contents data=ROWS out=old_cols(keep=name varnum) noprint;
 	run;
 	
-	/* Step 2: Add row numbers to COLS */
+	/* Add row numbers to cols */
 	data cols_with_num;
 	   set COLS;
 	   row_num = _n_;
 	run;
 	
-	/* Step 3: Create a mapping dataset */
+	/* Create a mapping dataset */
 	data rename_map;
 	   merge old_cols(rename=(name=old_name))
 	         cols_with_num(rename=(name=new_name row_num=varnum));
@@ -612,7 +615,7 @@
 	   rename_str = trim(old_name) || '=' || trim(new_name);
 	run;
 	
-	/* Step 4: Build rename statement */
+	/* Build rename statement */
 	proc sql noprint;
 	   select rename_str into :rename_list separated by ' '
 	   from rename_map;
@@ -629,13 +632,19 @@
 
 
 /* E2E test */
-%macro run_e2e(file=file, caslib=caslib, table=table, bot=bot, doc_path=path);
-    %put NOTE: Parameter values:;
+%macro run_e2e(file=file, caslib=caslib, table=table, bot=bot, doc_path=path, provider=provider, server=server);
+	%let table=%upcase(&table);
+	%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
+
+    %put Parameter values:;
+	%put NOTE: BASE_URI=&BASE_URI;
     %put NOTE: file=&file;
     %put NOTE: caslib=&caslib;
     %put NOTE: table=&table;
     %put NOTE: bot=&bot;
 	%put NOTE: doc_path=&doc_path;
+	%put NOTE: provider=&provider;
+	%put NOTE: server=&server;
 
     %import_data(
 	    &file,
@@ -644,19 +653,25 @@
 	);
 
 	%run_bots(
-		&table, 
-		&bot, 
-		&caslib
+		&BASE_URI,
+		&table,
+		&caslib,
+		&provider,
+		&server
 	);
 
 	%get_statistics(
+		&BASE_URI,
 		&table, 
 		&caslib
 	);
 
 	%generate_report(
+		&BASE_URI,
 		&table,
 		&caslib,
+	 	&encoded_provider,
+		&encoded_server,
 		&doc_path
 	);
 
