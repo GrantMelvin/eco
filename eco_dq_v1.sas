@@ -515,121 +515,122 @@
 	%put Method: &impute_method;
 
 /* 		Used for getting the total row count */
-/* 	proc http */
-/* 	    url="&BASE_URI/rowSets/tables/&encoded_provider~fs~&encoded_server~fs~&encoded_caslib~fs~&encoded_table/rows" */
-/* 	    method='GET' */
-/* 	    oauth_bearer=sas_services */
-/* 	    out=resp */
-/* 	    headerout=resp_hdr */
-/* 	    headerout_overwrite; */
-/* 	run; quit; */
-/*  */
-/* 	libname resp json fileref=resp; */
-/* 	 */
+	proc http
+	    url="&BASE_URI/rowSets/tables/&encoded_provider~fs~&encoded_server~fs~&encoded_caslib~fs~&encoded_table/rows"
+	    method='GET'
+	    oauth_bearer=sas_services
+	    out=resp
+	    headerout=resp_hdr
+	    headerout_overwrite;
+	run; quit;
+
+	libname resp json fileref=resp;
+	
 /* 			Extract root.count using JSON libname */
-/*   	data _null_; */
-/*     	set resp.root;  */
-/* 	    total_row_count = count; */
-/* 	    call symputx('total_row_count', total_row_count); */
-/*   	run; */
-/*  */
-/* 	%put Total Row Count: &total_row_count;  */
-/* 		 */
+  	data _null_;
+    	set resp.root; 
+	    total_row_count = count;
+	    call symputx('total_row_count', total_row_count);
+  	run;
+
+	%put Total Row Count: &total_row_count; 
+		
 /* 			Get the actual rows */
-/* 	proc http  */
-/* 	    url="&BASE_URI/casRowSets/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/rows?start=0&limit=&total_row_count" */
-/* 	    method='GET' */
-/* 	    oauth_bearer=sas_services */
-/* 		out=resp */
-/* 	    headerout=resp_hdr */
-/* 	    headerout_overwrite; */
-/* 	run; quit; */
-/*  */
-/* 	libname resp json fileref=resp; */
-/*  */
+	proc http 
+	    url="&BASE_URI/casRowSets/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/rows?start=0&limit=&total_row_count"
+	    method='GET'
+	    oauth_bearer=sas_services
+		out=resp
+	    headerout=resp_hdr
+	    headerout_overwrite;
+	run; quit;
+
+	libname resp json fileref=resp;
+
 /* 			Create a SAS table directly from items.cells JSON response */
-/* 	data work.rows; */
-/* 	  set resp.items_cells; */
-/* 	  drop ordinal_items ordinal_cells; */
-/* 	run; */
-/*  */
-/* 	proc print data=work.rows(obs=&total_row_count); */
-/* 	  title "&table Rows"; */
-/* 	run; */
-/* 	 */
+	data work.rows;
+	  set resp.items_cells;
+	  drop ordinal_items ordinal_cells;
+	run;
+
+	proc print data=work.rows(obs=&total_row_count);
+	  title "&table Rows";
+	run;
+	
 /* 		Get the column count */
-/* 	proc http  */
-/* 	    url="&BASE_URI/casManagement/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/columns" */
-/* 	    method='GET' */
-/* 	    oauth_bearer=sas_services */
-/* 	    out=resp */
-/* 	    headerout=resp_hdr */
-/* 	    headerout_overwrite; */
-/* 	run; quit; */
-/*  */
-/* 	libname resp json fileref=resp; */
-/* 	 */
+	proc http 
+	    url="&BASE_URI/casManagement/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/columns"
+	    method='GET'
+	    oauth_bearer=sas_services
+	    out=resp
+	    headerout=resp_hdr
+	    headerout_overwrite;
+	run; quit;
+
+	libname resp json fileref=resp;
+	
 /* 			Extract root.count into the total_col_count */
-/*   	data _null_; */
-/*     	set resp.root;  */
-/* 	    total_col_count = count;  */
-/* 	    call symputx('total_col_count', total_col_count); */
-/*   	run; */
-/*  */
-/* 	%put Total Col Count: &total_col_count; */
-/* 	 */
+  	data _null_;
+    	set resp.root; 
+	    total_col_count = count; 
+	    call symputx('total_col_count', total_col_count);
+  	run;
+
+	%put Total Col Count: &total_col_count;
+	
 /* 		Extracts the column content */
-/* 	proc http  */
-/* 	    url="&BASE_URI/casManagement/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/columns?start=0&limit=&total_col_count" */
-/* 	    method='GET' */
-/* 	    oauth_bearer=sas_services */
-/* 	    out=resp */
-/* 	    headerout=resp_hdr */
-/* 	    headerout_overwrite; */
-/* 	run; quit; */
-/*  */
-/* 	libname resp json fileref=resp; */
-/*  */
+	proc http 
+	    url="&BASE_URI/casManagement/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/columns?start=0&limit=&total_col_count"
+	    method='GET'
+	    oauth_bearer=sas_services
+	    out=resp
+	    headerout=resp_hdr
+	    headerout_overwrite;
+	run; quit;
+
+	libname resp json fileref=resp;
+
 /* 			Create a SAS table directly from resp.items JSON */
-/* 	data work.cols; */
-/* 	  set resp.items; */
-/* 	  keep name; */
-/* 	run; */
-/*  */
-/* 	proc print data=work.cols(obs=&total_col_count) noobs; */
-/* 	  title "&table Columns"; */
-/* 	run; */
-/* 	 */
+	data work.cols;
+	  set resp.items;
+	  keep name;
+	run;
+
+	proc print data=work.cols(obs=&total_col_count) noobs;
+	  title "&table Columns";
+	run;
+	
 /* 		Get column names from both tables */
-/* 	proc contents data=ROWS out=old_cols(keep=name varnum) noprint; */
-/* 	run; */
-/* 	 */
+	proc contents data=ROWS out=old_cols(keep=name varnum) noprint;
+	run;
+	
 /* 		Add row numbers to cols */
-/* 	data cols_with_num; */
-/* 	   set COLS; */
-/* 	   row_num = _n_; */
-/* 	run; */
-/* 	 */
+	data cols_with_num;
+	   set COLS;
+	   row_num = _n_;
+	run;
+	
 /* 		Create a mapping dataset */
-/* 	data rename_map; */
-/* 	   merge old_cols(rename=(name=old_name)) */
-/* 	         cols_with_num(rename=(name=new_name row_num=varnum)); */
-/* 	   by varnum; */
-/* 	   length rename_str $100; */
-/* 	   rename_str = trim(old_name) || '=' || trim(new_name); */
-/* 	run; */
-/* 	 */
+	data rename_map;
+	   merge old_cols(rename=(name=old_name))
+	         cols_with_num(rename=(name=new_name row_num=varnum));
+	   by varnum;
+	   length rename_str $100;
+	   rename_str = trim(old_name) || '=' || trim(new_name);
+	run;
+	
 /* 		Build rename statement */
-/* 	proc sql noprint; */
-/* 	   select rename_str into :rename_list separated by ' ' */
-/* 	   from rename_map; */
-/* 	quit; */
-/* 	 */
+	proc sql noprint;
+	   select rename_str into :rename_list separated by ' '
+	   from rename_map;
+	quit;
+	
 /* 		Apply renaming */
-/* 	proc datasets lib=work nolist; */
-/* 	   modify ROWS; */
-/* 	   rename &rename_list; */
-/* 	quit; */
+	proc datasets lib=work nolist;
+	   modify ROWS;
+	   rename &rename_list;
+	quit;
+
 	/* Parse the impute_on parameter into a list of variables */
 	%let impute_vars = %sysfunc(tranwrd(&impute_on, %str(,), %str( )));
 	%put NOTE: Imputation variables: &impute_vars;
