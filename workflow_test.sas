@@ -3,6 +3,8 @@
 %let basepath = %substr(&fullpath, 1, %index(&fullpath, workflow_test.sas) - 2);
 %put &basepath;
 
+%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
+
 /* Data Quality Module */
 %include "&basepath/eco_dq_v1.sas";
 
@@ -18,29 +20,31 @@
 	server=cas-shared-default,
     caslib=CASUSER(grmelv),
     table=test_e2e_1,
-	bot=test-bot-e2e_1,
 	doc_path=&basepath/reports
 );
 
-/* Uploads files to CAS */
+/* Uploads and promotes a file to CAS */
 /* Parameters:
-	file   = the file you want to perform analysis on
-	caslib = the caslib that you want to upload 
-	table  = the table name of the file you are analyzing
+	file   = file path you want to perform analysis on
+	caslib = target caslib to upload to
+	table  = desired table name for file
 */
 %import_data(
-    &test_file_3,
+    &test_file_1,
     CASUSER(grmelv),
-    table=test2
+    table=test_e2e_1
 );
 
 /* Creates and Runs bot for analysis in the SAS Catalog */
 /* Parameters:
+	BASE_URI = the base path of the SAS Viya site
 	table 	 = the table you want to evaluate
-	bot_name = the name of the bot you want to create
 	caslib 	 = the caslib that the table is located in
+	provider = the provider of the desired table
+	server   = the server of the provided table
 */
 %run_bots(
+	&BASE_URI,
 	test_e2e_1,  
 	CASUSER(grmelv),
 	cas,
@@ -49,54 +53,68 @@
 
 /* Retrieves the information catalog statistics for the given table */
 /* Parameters:
+	BASE_URI = the base path of the SAS Viya site
 	table 	 = the table you want to evaluate
 	caslib 	 = the caslib that the table is located in
 */
 %get_statistics(
+	&BASE_URI,
 	test_e2e_1, 
 	CASUSER(grmelv)
 );
 
 /* Creates a report to get data quality statistics on the given table */
 /* Parameters:
-	sastable = the lib.table name to perform analysis on
+	BASE_URI = the base path of the SAS Viya site
 	table 	 = the table you want to evaluate
 	caslib 	 = the caslib that the table is located in
-	path	 = the directory where you want the report to be stored
+	provider = the provider of the desired table
+	server   = the server of the provided table
+	doc_path = the directory where you want the report to be stored
 */
 %generate_report(
+	&BASE_URI,
 	test_e2e_1,
 	CASUSER(grmelv),
+	cas,
+	cas-shared-default,
 	&basepath/reports
 );
 
-/* Produces a table that drops the rows if a specified variable is not present(as if it is a target)*/
+/* Produces a table that imputes on the desired variable and drops rows that have a certain % of values missing*/
 /* Parameters:
-	name	 = the name of the variable you want to treat as a target
-	table 	 = the table you want to evaluate
-	caslib 	 = the caslib that the table is located in
+	BASE_URI 	  = the base path of the SAS Viya site
+	table 	  	  = the table you want to evaluate
+	caslib 	  	  = the caslib that the table is located in
+	provider  	  = the provider of the desired table
+	server    	  = the server of the provided table
+	impute_on     = the variable that you want to perform imputation on
+	impute_method = the method of imputation that you'd like to use
 */
 %first_correction(
-	testing_table, 
+	&BASE_URI,
+	test_e2e_1, 
 	CASUSER(grmelv),
-	impute=KIL_END_DATE,
-	method=mean
+	cas,
+	cas-shared-default,
+	impute_on=KIL_END_DATE,
+	impute_method=mean
 );
 
-/* Runs the entire script E2E*/
+/* Runs the entire script end to end; apart from a first table correction */
 /* Parameters:
 	file	 = the file that you want to upload to caslib and perform analysis on
-	caslib 	 = the caslib that you have access to
+	provider = the provider of the desired table
+	server   = the server of the provided table
+	caslib 	 = the caslib that you want the table to be located in
 	table    = the name of the table that you want to create in caslib/information catalog
-	bot      = the name of the bot that you will create to perform the analysis
+	doc_path = the directory where you want the report to be stored
 */
 %run_e2e(
-	BASE_URI=
 	file=&test_file_1,
 	provider=cas,
 	server=cas-shared-default,
     caslib=CASUSER(grmelv),
     table=test_e2e_1,
-	bot=test-bot-e2e_1,
 	doc_path=&basepath/reports
 );

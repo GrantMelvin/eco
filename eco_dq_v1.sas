@@ -5,7 +5,7 @@
     %if %sysfunc(sessfound(mysession)) %then %do;
         cas mysession terminate;
     %end;
-    cas mysession;
+    cas mysession ;
 
 	/* File import for each type of file */
     %macro import_single_file(filepath, tablename);
@@ -260,7 +260,7 @@
 
 	/* Gets the maximum count that we need to look for the instance in */
 	proc http 
-	    url="&BASE_URI/catalog/search?q=&encoded_table" /*Fix*/
+	    url="&BASE_URI/catalog/search?q=&encoded_table"
 	    method='GET'
 	    oauth_bearer=sas_services
 	    out=resp
@@ -272,6 +272,7 @@
 
 	libname resp json fileref=resp;
 
+	/* Sets the total number of tables available to us */
   	data _null_;
     	set resp.root; 
 	    total_search_count = count; 
@@ -280,7 +281,7 @@
 
 	/* Extracts the instance ID for target table */
 	proc http 
-	    url="&BASE_URI/catalog/search?start=0&limit=&total_search_count&q=&encoded_table" /*Fix*/
+	    url="&BASE_URI/catalog/search?start=0&limit=&total_search_count&q=&encoded_table"
 	    method='GET'
 	    oauth_bearer=sas_services
 	    out=resp
@@ -291,8 +292,6 @@
 	run; quit;
 
 	libname resp json fileref=resp;
-
-	%put after catalog instance search.;
 	
 	/* Extract the id where name matches table */
 	data _null_;
@@ -303,7 +302,7 @@
 	
 	%put Instance ID: &instance_id;
 	
-	/*	prep query */
+	/* prep query */
 	data _null_;
 	  file inst_id;
 	  if _n_=1 then do;
@@ -318,7 +317,7 @@
 	  end;
 	run;
 	
-	/*     Gets the information catalog info */
+	/* Gets the information catalog info */
     proc http 
         url="&BASE_URI/catalog/instances/"
         method='POST'
@@ -331,10 +330,9 @@
         headers 'Accept' = 'application/json, application/vnd.sas.metadata.instance.archive+json, application/vnd.sas.error+json';
     run;
 
-	/*     Process JSON response into SAS table */
     libname resp json fileref=resp;
 
-	/*     The stats for each feature */
+	/* The stats for each feature */
     data work.attributes;
         set resp.entities_attributes;
 		by ordinal_entities;
@@ -367,9 +365,11 @@
     %let encoded_caslib=%sysfunc(urlencode(&caslib));
 	%let encoded_server=%sysfunc(getoption(&server));  
 	%let encoded_provider=%sysfunc(getoption(&provider)); 
+
     /* Create temporary files for response handling */
     filename resp temp;
     filename resp_hdr temp;
+
 	/* Get the total row count for this table */
 	proc http
 	    url="&BASE_URI/rowSets/tables/&encoded_provider~fs~&encoded_server~fs~&encoded_caslib~fs~&encoded_table/rows"
@@ -379,15 +379,17 @@
 	    headerout=resp_hdr
 	    headerout_overwrite;
 	run; quit;
+
 	libname resp json fileref=resp;
 	
-	/* Extract root.count using JSON libname */
+	/* Extract the total amount of rows */
   	data _null_;
-    	set resp.root; /* Access the root object */
-	    total_count = count; /* Assign the count to a variable */
-	    call symputx('total_count', total_count); /* Store in macro variable */
+    	set resp.root; 
+	    total_count = count; 
+	    call symputx('total_count', total_count);
   	run;
-	%put Total Count: &total_count; /* Log the value */
+
+	%put Total Count: &total_count;
 	
 	/* Create a new dataset containing only features with completenessPercent < 50 */
 	data CompletenessReport;
