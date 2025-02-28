@@ -1,4 +1,9 @@
-/* uploads a file to the caslib with the table name described */
+/* Uploads and promotes a file to CAS */
+/* Parameters:
+	file   = file path you want to perform analysis on (sas7bdat, csv, xls, xlsx supported)
+	caslib = target caslib to upload to (best with casuser)
+	table  = desired table name for file
+*/
 %macro import_data(file, caslib, table=table);
 
 	/* Silence warnings */
@@ -11,6 +16,13 @@
     %macro import_single_file(filepath, tablename);
 		%let filename = %scan(&filepath, -1, "/");
         %let filetype = %scan(&filepath, -1, '.');
+		%put &filepath;
+		
+		/* Removes everything before ECO in the filename */
+		%let eco_pos = %index(&filepath, ECO);
+		%let formatted_filepath = %substr(&filepath, &eco_pos);
+		%put &formatted_filepath;
+
 	    /* drop the table if it already exists */
 		proc casutil;
 			droptable casdata="&tablename" incaslib="&caslib" quiet;
@@ -19,7 +31,7 @@
 			%let tablename = %upcase(&tablename);
 
             %if %upcase(&filetype) = CSV %then %do;
-                load casdata="ECO/test_files/&filename"       
+                load casdata="&formatted_filepath"       
                 importoptions=(filetype="csv" 
                                getnames="true" 
                                encoding="latin1")
@@ -28,7 +40,7 @@
                 replace;
             %end;
             %else %if %upcase(&filetype) = XLSX or %upcase(&filetype) = XLS %then %do;  
-				load casdata="ECO/test_files/&filename"   
+				load casdata="&formatted_filepath"   
                 importoptions=(filetype="excel" 
                                getnames="true")
                 outcaslib="&caslib" 
@@ -49,7 +61,14 @@
     %import_single_file(&file, &table);
 %mend import_data;
 
-/* Use Information catalog to generate baseline analysis */
+/* Creates and Runs bot for analysis in the SAS Catalog */
+/* Parameters:
+	BASE_URI = the base path of the SAS Viya site
+	table 	 = the table you want to evaluate
+	caslib 	 = the caslib that the table is located in
+	provider = the provider of the desired table
+	server   = the server of the provided table
+*/
 %macro run_bots(BASE_URI, table, caslib, provider, server);
 
     %let bot = &table.-ECO-BOT;
@@ -242,7 +261,12 @@
 
 %mend run_bots;
 
-/* Get statistics from the DQ part of the information catalog */
+/* Retrieves the information catalog statistics for the given table */
+/* Parameters:
+	BASE_URI = the base path of the SAS Viya site
+	table 	 = the table you want to evaluate
+	caslib 	 = the caslib that the table is located in
+*/
 %macro get_statistics(BASE_URI, table, caslib);
  
     %let encoded_table=%sysfunc(urlencode(&table));
@@ -360,7 +384,15 @@
 
 %mend get_statistics;
 
-/* Generate a table report on characteristics of the analysis from bots */
+/* Creates a report to get data quality statistics on the given table */
+/* Parameters:
+	BASE_URI = the base path of the SAS Viya site
+	table 	 = the table you want to evaluate
+	caslib 	 = the caslib that the table is located in
+	provider = the provider of the desired table
+	server   = the server of the provided table
+	doc_path = the directory where you want the report to be stored
+*/
 %macro generate_report(BASE_URI, table, caslib, provider, server, doc_path);
  
     %let encoded_table=%sysfunc(urlencode(&table));
@@ -489,6 +521,17 @@
 	    where mismatchedPercent > 25
 	  ;
 	quit;
+
+	/* Create the doc path if it does not exist */	
+	%let dummy_file = &doc_path/dummy_check.txt;
+	%let dir_exists = %sysfunc(fileexist(&dummy_file));
+	  
+	/* If directory doesn't exist */
+	%if &dir_exists = 0 %then %do;
+	  /* Create directory using operating system command */
+	  %let sysrc = %sysfunc(system(mkdir "&doc_path"));
+	  %put Directory &doc_path created;
+	%end;
 	
 	/* Render as a PDF */
 	ods pdf file="&doc_path/&table._report.pdf" style=Journal;
@@ -500,7 +543,17 @@
 	
 %mend generate_report;
 
-/* Impute in a way defined by the user */
+/* Produces a table that imputes on the desired variable and drops rows that have a certain % of values missing*/
+/* Parameters:
+	BASE_URI 	  	   = the base path of the SAS Viya site
+	table 	  	  	   = the table you want to evaluate
+	caslib 	  	  	   = the caslib that the table is located in
+	provider  	  	   = the provider of the desired table
+	server    	  	   = the server of the provided table
+	deletion_threshold = if a row exceeds this % of missing values it will be deleted
+	impute_on     	   = the array of variable names that you want to perform imputation on
+	impute_method 	   = the method of imputation that you'd like to use
+*/
 %macro first_correction(BASE_URI, table, caslib, provider, server, deletion_threshold, impute_on=impute_on, impute_method=impute_method); 
     %let encoded_table=%sysfunc(urlencode(&table));
     %let encoded_caslib=%sysfunc(urlencode(&caslib));
@@ -691,7 +744,15 @@
 
 %mend first_correction;
 
-/* E2E Process */
+/* Runs the entire script end to end; apart from a first table correction */
+/* Parameters:
+	file	 = the file that you want to upload to caslib and perform analysis on
+	provider = the provider of the desired table
+	server   = the server of the provided table
+	caslib 	 = the caslib that you want the table to be located in
+	table    = the name of the table that you want to create in caslib/information catalog
+	doc_path = the directory where you want the report to be stored
+*/
 %macro run_e2e(file=file, provider=provider, server=server, caslib=caslib, table=table, doc_path=path);
 	%let table=%upcase(&table);
 	%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
