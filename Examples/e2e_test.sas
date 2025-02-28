@@ -1,10 +1,10 @@
-/* Data Quality Module */
-%include "&basepath/../eco_dq_v1.sas";
-
 /* Get the current directory path & URL*/
 %let fullpath = &_SASPROGRAMFILE;
 %let basepath = %substr(&fullpath, 1, %index(&fullpath, e2e_test.sas) - 2);
 %let BASE_URI=%sysfunc(getoption(servicesbaseurl));
+
+/* Data Quality Module */
+%include "&basepath/../eco_dq_v1.sas";
 
 /* Test files for analysis */
 %let test_file_1 = &basepath/Test_Files/abt_demo.sas7bdat;
@@ -47,7 +47,7 @@
 	server    	  	   = the server of the provided table
 	deletion_threshold = if a row exceeds this % of missing values it will be deleted
 	impute_on     	   = the array of variable names that you want to perform imputation on
-	impute_method 	   = the method of imputation that you'd like to use
+	impute_method 	   = the method of imputation that you'd like to use (Supported: Mean, Median)
 */
 %first_correction(
 	&BASE_URI,

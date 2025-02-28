@@ -567,7 +567,7 @@
 	%put Impute on: &impute_on;
 	%put Method: &impute_method;
 
-/* 		Used for getting the total row count */
+	/* Used for getting the total row count */
 	proc http
 	    url="&BASE_URI/rowSets/tables/&encoded_provider~fs~&encoded_server~fs~&encoded_caslib~fs~&encoded_table/rows"
 	    method='GET'
@@ -579,7 +579,7 @@
 
 	libname resp json fileref=resp;
 	
-/* 			Extract root.count using JSON libname */
+	/* Extract root.count using JSON libname */
   	data _null_;
     	set resp.root; 
 	    total_row_count = count;
@@ -588,7 +588,7 @@
 
 	%put Total Row Count: &total_row_count; 
 		
-/* 			Get the actual rows */
+	/* Get the actual rows */
 	proc http 
 	    url="&BASE_URI/casRowSets/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/rows?start=0&limit=&total_row_count"
 	    method='GET'
@@ -600,17 +600,13 @@
 
 	libname resp json fileref=resp;
 
-/* 			Create a SAS table directly from items.cells JSON response */
+	/* Create a SAS table directly from items.cells JSON response */
 	data work.rows;
 	  set resp.items_cells;
 	  drop ordinal_items ordinal_cells;
 	run;
-
-	proc print data=work.rows(obs=&total_row_count);
-	  title "&table Rows";
-	run;
 	
-/* 		Get the column count */
+	/* Get the column count */
 	proc http 
 	    url="&BASE_URI/casManagement/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/columns"
 	    method='GET'
@@ -622,7 +618,7 @@
 
 	libname resp json fileref=resp;
 	
-/* 			Extract root.count into the total_col_count */
+	/* Extract root.count into the total_col_count */
   	data _null_;
     	set resp.root; 
 	    total_col_count = count; 
@@ -631,7 +627,7 @@
 
 	%put Total Col Count: &total_col_count;
 	
-/* 		Extracts the column content */
+	/* Extracts the column content */
 	proc http 
 	    url="&BASE_URI/casManagement/servers/&encoded_server/caslibs/&encoded_caslib/tables/&encoded_table/columns?start=0&limit=&total_col_count"
 	    method='GET'
@@ -643,27 +639,23 @@
 
 	libname resp json fileref=resp;
 
-/* 			Create a SAS table directly from resp.items JSON */
+	/* Create a SAS table directly from resp.items JSON */
 	data work.cols;
 	  set resp.items;
 	  keep name;
 	run;
-
-	proc print data=work.cols(obs=&total_col_count) noobs;
-	  title "&table Columns";
-	run;
 	
-/* 		Get column names from both tables */
+	/* Get column names from both tables */
 	proc contents data=ROWS out=old_cols(keep=name varnum) noprint;
 	run;
 	
-/* 		Add row numbers to cols */
+	/* Add row numbers to cols */
 	data cols_with_num;
 	   set COLS;
 	   row_num = _n_;
 	run;
 	
-/* 		Create a mapping dataset */
+	/* Create a mapping dataset */
 	data rename_map;
 	   merge old_cols(rename=(name=old_name))
 	         cols_with_num(rename=(name=new_name row_num=varnum));
@@ -672,13 +664,13 @@
 	   rename_str = trim(old_name) || '=' || trim(new_name);
 	run;
 	
-/* 		Build rename statement */
+	/* Build rename statement */
 	proc sql noprint;
 	   select rename_str into :rename_list separated by ' '
 	   from rename_map;
 	quit;
 	
-/* 		Apply renaming */
+	/* Apply renaming */
 	proc datasets lib=work nolist;
 	   modify ROWS;
 	   rename &rename_list;
@@ -689,7 +681,8 @@
 	%put NOTE: Imputation variables: &impute_vars;
 	%put NOTE: Imputation method: &impute_method;
 	%put NOTE: Deletion threshold: &deletion_threshold;
-/* Create imputed_data and apply deletion threshold */
+
+	/* Create imputed_data and apply deletion threshold */
 	data work.imputed_data;
 	    set work.rows;
 	    
@@ -721,26 +714,39 @@
 	    %let current_var = %scan(&impute_vars, &i);
 	    %put NOTE: Processing variable: &current_var;
 	    
-	    /* Get the mean value for the current variable from work.final_entities */
-	    proc sql noprint;
-	        select mean into :var_mean
-	        from work.final_entities
-	        where name = "&current_var";
-	    quit;
+	    /* Get the appropriate statistic based on imputation method */
+	    %if "&impute_method" = "median" %then %do;
+	        proc sql noprint;
+	            select median into :impute
+	            from work.final_entities
+	            where name = "&current_var";
+	        quit;
+	        %put NOTE: Median value for &current_var is &impute;
+	    %end;
+	    %else %do; /* Default to mean if not median */
+	        proc sql noprint;
+	            select mean into :impute
+	            from work.final_entities
+	            where name = "&current_var";
+	        quit;
+	        %put NOTE: Mean value for &current_var is &impute;
+	    %end;
 	    
-	    %put NOTE: Mean value for &current_var is &var_mean;
-	    
-	    /* Impute missing values in imputed_data using the mean value */
+	    /* Impute missing values in imputed_data using the calculated value */
 	    data work.imputed_data;
 	        set work.imputed_data;
 	        if &current_var = . or &current_var = "" then do;
-	            &current_var = &var_mean;
-	            put "IMPUTED: Row " _N_ ": Variable &current_var set to &var_mean";
+	            &current_var = &impute;
+	            put "IMPUTED: Row " _N_ ": Variable &current_var set to &impute";
 	        end;
 	    run;
 	    
 	    %put NOTE: Imputation completed for variable &current_var;
 	%end;
+
+	proc print data=work.imputed_data noobs;
+		Title "Imputed Dataset";
+	run;
 
 %mend first_correction;
 
