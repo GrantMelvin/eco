@@ -77,12 +77,15 @@ Creates a standardized data quality report highlighting issues:
 
 ```sas
 %generate_report(
-    BASE_URI,       /* The base path of the SAS Viya site */
-    table,          /* The table you want to evaluate */
-    caslib,         /* The caslib that the table is located in */
-    provider,       /* The provider of the desired table */
-    server,         /* The server of the provided table */
-    doc_path        /* The directory where you want the report to be stored */
+    BASE_URI,                 /* The base path of the SAS Viya site */
+    table,                    /* The table you want to evaluate */
+    caslib,                   /* The caslib that the table is located in */
+    provider,                 /* The provider of the desired table */
+    server,                   /* The server of the provided table */
+    doc_path                  /* The directory where you want the report to be stored */
+	completeness_threshold,   /* The row has to contain at least this % of values or be flagged */
+	outlier_threshold,        /* The row cannot contain more than this % of outliers or be flagged */
+	mismatch_threshold,       /* The row cannot contain more than this % of mismatched types or be flagged */
 );
 ```
 
@@ -114,6 +117,9 @@ Executes the complete data quality workflow from data import to reporting:
     caslib=caslib,              /* The caslib that you want the table to be located in */
     table=table,                /* The name of the table that you want to create */
     doc_path=path               /* The directory where you want the report to be stored */
+	completeness_threshold=30   /* The row has to contain at least this % of values or be flagged */
+	outlier_threshold=10        /* The row cannot contain more than this % of outliers or be flagged */
+	mismatch_threshold=25       /* The row cannot contain more than this % of mismatched types or be flagged */
 );
 ```
 
@@ -136,7 +142,10 @@ The following example demonstrates a complete end-to-end workflow for analyzing 
     server=cas-shared-default,
     caslib=CASUSER(grmelv),
     table=test_e2e_1,
-    doc_path=&basepath/reports
+    doc_path=&basepath/reports,
+	completeness_threshold=30,
+	outlier_threshold=10,
+	mismatch_threshold=25
 );
 ```
 
