@@ -117,9 +117,9 @@ Executes the complete data quality workflow from data import to reporting:
     caslib=caslib,              /* The caslib that you want the table to be located in */
     table=table,                /* The name of the table that you want to create */
     doc_path=path               /* The directory where you want the report to be stored */
-    completeness_threshold=30   /* The row has to contain at least this % of values or be flagged */
-    outlier_threshold=10        /* The row cannot contain more than this % of outliers or be flagged */
-    mismatch_threshold=25       /* The row cannot contain more than this % of mismatched types or be flagged */
+    completeness_threshold=30   /* The feature has to contain at least this % of values or be flagged */
+    outlier_threshold=10        /* The feature cannot contain more than this % of outliers or be flagged */
+    mismatch_threshold=25       /* The feature cannot contain more than this % of mismatched types or be flagged */
 );
 ```
 
