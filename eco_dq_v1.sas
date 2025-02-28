@@ -393,12 +393,17 @@
 	server   = the server of the provided table
 	doc_path = the directory where you want the report to be stored
 */
-%macro generate_report(BASE_URI, table, caslib, provider, server, doc_path);
+%macro generate_report(BASE_URI, table, caslib, provider, server, doc_path, completeness_threshold, outlier_threshold, mismatch_threshold);
  
     %let encoded_table=%sysfunc(urlencode(&table));
     %let encoded_caslib=%sysfunc(urlencode(&caslib));
 	%let encoded_server=%sysfunc(urlencode(&server));  
 	%let encoded_provider=%sysfunc(urlencode(&provider)); 
+
+    %let completeness_threshold = %sysevalf(&completeness_threshold + 0);
+    %let outlier_threshold = %sysevalf(&outlier_threshold + 0);
+    %let mismatch_threshold = %sysevalf(&mismatch_threshold + 0);
+
 
     /* Create temporary files for response handling */
     filename resp temp;
@@ -428,7 +433,7 @@
 	/* Create a new dataset containing only features with completenessPercent < 50 */
 	data CompletenessReport;
 	  set work.final_entities;
-	  where completenessPercent < 50 and completenessPercent is not missing;
+	  where completenessPercent < &completeness_threshold and completenessPercent is not missing;
    	  message = catx('',
             "Contains",
             trim(put(completenessPercent, best8.2)),
@@ -484,21 +489,21 @@
 	
 	%if &has_outlier_var = 1 %then %do;
 	  proc print data=OutlierReport noobs;
-	      title "Outliers > 10%";
+	      title "Outliers > &outlier_threshold%";
 	      var ordinal_entities name outlierCount outlierPercent message;
-		  where outlierPercent > 10;
+		  where outlierPercent > &outlier_threshold;
 	  run;
 	%end;
 	
   	proc print data=CompletenessReport noobs;
-     	title "Completeness < 50%";
+     	title "Completeness < &completeness_threshold%";
 		var ordinal_entities name missingCount completenessPercent message;
   	run;
 	
 	proc print data=mismatchReport noobs;
-     	title "Mismatched > 25%";
+     	title "Mismatched > &mismatch_threshold%";
 		var ordinal_entities name mismatchedCount mismatchedPercent message;
-		where mismatchedPercent > 25;
+		where mismatchedPercent > &mismatch_threshold;
   	run;
 	
 	/* Combine the three reports using SQL */
@@ -508,7 +513,7 @@
 	    /* Outlier rows */
 	    select name, 'Outlier' as error_type, message
 	    from OutlierReport
-	    where outlierPercent > 10
+	    where outlierPercent > &outlier_threshold
 	    union all
 	    %end;
 	    /* Completeness rows */
@@ -518,7 +523,7 @@
 	    /* Mismatched rows */
 	    select name, 'Mismatched' as error_type, message
 	    from mismatchReport
-	    where mismatchedPercent > 25
+	    where mismatchedPercent > &mismatch_threshold
 	  ;
 	quit;
 
@@ -759,7 +764,8 @@
 	table    = the name of the table that you want to create in caslib/information catalog
 	doc_path = the directory where you want the report to be stored
 */
-%macro run_e2e(file=file, provider=provider, server=server, caslib=caslib, table=table, doc_path=path);
+%macro run_e2e(file=file, provider=provider, server=server, caslib=caslib, table=table, doc_path=path, 
+completeness_threshold=completeness_threshold, outlier_threshold=outlier_threshold, mismatch_threshold=mismatch_threshold);
 	%let table=%upcase(&table);
 	%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
 
@@ -798,7 +804,10 @@
 		&caslib,
 	 	&encoded_provider,
 		&encoded_server,
-		&doc_path
+		&doc_path,
+		&completeness_threshold,
+		&outlier_threshold,
+		&mismatch_threshold
 	);
 
 %mend run_e2e;

@@ -14,7 +14,7 @@
 %let test_file_5 = &basepath/Test_Files/Diabetes_Missing_Data.csv;
 
 /* Test parameters for analysis */
-%let test_table = test_e2e_5;			/* The name of the table in Information Catalog */
+%let test_table = test_e2e_1;			/* The name of the table in Information Catalog */
 %let caslib 	= CASUSER(grmelv);		/* The name of the caslib you have access to    */
 %let provider 	= cas;					/* The name of the provider you have access to  */
 %let server 	= cas-shared-default;	/* The name of the server you have access to  	*/
@@ -22,20 +22,26 @@
 
 /* Runs the entire script end to end; apart from a first table correction */
 /* Parameters:
-	file	 = the file that you want to upload to caslib and perform analysis on
-	provider = the provider of the desired table
-	server   = the server of the provided table
-	caslib 	 = the caslib that you want the table to be located in
-	table    = the name of the table that you want to create in caslib/information catalog
-	doc_path = the directory where you want the report to be stored
+	file	 			   = The file that you want to upload to caslib and perform analysis on
+	provider 			   = The provider of the desired table
+	server   			   = The server of the provided table
+	caslib 	 			   = The caslib that you want the table to be located in
+	table                  = The name of the table that you want to create in caslib/information catalog
+	doc_path 			   = The directory where you want the report to be stored
+	completeness_threshold = The row must contain at least this % of values or be flagged
+	outlier_threshold 	   = The row cannot contain more than this % of outliers or be flagged
+	mismatch_threshold 	   = The row cannot contain more than this % of mismatched types or be flagged
 */
 %run_e2e(
-	file=&test_file_5,
+	file=&test_file_1,
 	provider=&provider,
 	server=&server,
     caslib=&caslib,
     table=&test_table,
-	doc_path=&doc_path
+	doc_path=&doc_path,
+	completeness_threshold=30,
+	outlier_threshold=10,
+	mismatch_threshold=25
 );
 
 /* Produces a table that imputes on the desired variable and drops rows that have a certain % of values missing*/
