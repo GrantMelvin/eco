@@ -15,20 +15,20 @@ The ECO Data Quality Framework is a comprehensive SAS-based solution for automat
 ## Directory Structure
 
 ```
-└── grantmelvin-eco/
-    ├── dq_testing.sas       # API testing
-    ├── eco_dq_v1.sas        # Core framework implementation
-    ├── workflow_test.sas    # End-to-end workflow testing script
-    ├── reports/             # Directory for generated reports
-        ├── TEST_E2E_1_report.pdf
-        ├── TEST_E2E_2_report.pdf
-        ├── TEST_E2E_3_report.pdf
-        └── TEST_E2E_4_report.pdf
-    └── test_files/          # Test datasets
-        ├── Financial_Sample.xlsx
-        ├── all-approved_oncology_drugs.xlsx
-        ├── metadata_test.csv
-        └── test.sas7bdat
+└── ECO/
+    ├── eco_dq_v1.sas                        # Core framework implementation
+    └── Examples/
+        ├── e2e_test.sas                     # Shows example e2e usage
+        ├── Reports/                         # Directory for generated reports
+            ├── TEST_E2E_1_report.pdf
+            ├── TEST_E2E_2_report.pdf
+            ├── TEST_E2E_3_report.pdf
+            └── TEST_E2E_4_report.pdf
+        └── Test_Files/                      # Test datasets
+            ├── Financial_Sample.xlsx
+            ├── all-approved_oncology_drugs.xlsx
+            ├── metadata_test.csv
+            └── test.sas7bdat
 ```
 
 ## Core Macros
