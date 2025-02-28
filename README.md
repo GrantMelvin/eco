@@ -143,9 +143,9 @@ The following example demonstrates a complete end-to-end workflow for analyzing 
     caslib=CASUSER(grmelv),
     table=test_e2e_1,
     doc_path=&basepath/reports,
-	completeness_threshold=30,
-	outlier_threshold=10,
-	mismatch_threshold=25
+    completeness_threshold=30,
+    outlier_threshold=10,
+    mismatch_threshold=25
 );
 ```
 
