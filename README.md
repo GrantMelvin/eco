@@ -2,7 +2,7 @@
 
 ## Overview
 
-The ECO Data Quality Framework is a comprehensive SAS-based solution for automating data quality assessment, reporting, and correction workflows. This framework leverages SAS Viya's API to interact with the Information Catalog, perform statistical analysis on datasets, and generate standardized data quality reports.
+The ECO Data Quality Framework is a comprehensive SAS-based solution for automating data quality assessment, reporting, and correction workflows. This framework leverages Viya's API to interact with the Information Catalog, perform statistical analysis on datasets, and generate standardized data quality reports.
 
 ## Key Features
 
@@ -15,27 +15,27 @@ The ECO Data Quality Framework is a comprehensive SAS-based solution for automat
 ## Directory Structure
 
 ```
-└── grantmelvin-eco/
-    ├── dq_testing.sas       # API testing
-    ├── eco_dq_v1.sas        # Core framework implementation
-    ├── workflow_test.sas    # End-to-end workflow testing script
-    ├── reports/             # Directory for generated reports
-        ├── TEST_E2E_1_report.pdf
-        ├── TEST_E2E_2_report.pdf
-        ├── TEST_E2E_3_report.pdf
-        └── TEST_E2E_4_report.pdf
-    └── test_files/          # Test datasets
-        ├── Financial_Sample.xlsx
-        ├── all-approved_oncology_drugs.xlsx
-        ├── metadata_test.csv
-        └── test.sas7bdat
+└── ECO/
+    ├── eco_dq_v1.sas                        # Core framework implementation
+    └── Examples/
+        ├── e2e_test.sas                     # Shows example e2e usage
+        ├── Reports/                         # Directory for generated reports
+            ├── TEST_E2E_1_report.pdf
+            ├── TEST_E2E_2_report.pdf
+            ├── TEST_E2E_3_report.pdf
+            └── TEST_E2E_4_report.pdf
+        └── Test_Files/                      # Test datasets
+            ├── Financial_Sample.xlsx
+            ├── all-approved_oncology_drugs.xlsx
+            ├── metadata_test.csv
+            └── test.sas7bdat
 ```
 
 ## Core Macros
 
 ### Import Data (`%import_data`)
 
-Imports data from various file formats into SAS CAS libraries:
+Imports data from various file formats into CAS libraries:
 
 ```sas
 %import_data(
@@ -47,7 +47,7 @@ Imports data from various file formats into SAS CAS libraries:
 
 ### Run Bots (`%run_bots`)
 
-Creates and executes SAS Information Catalog bots to analyze dataset properties:
+Creates and executes Information Catalog bots to analyze dataset properties:
 
 ```sas
 %run_bots(
@@ -77,12 +77,15 @@ Creates a standardized data quality report highlighting issues:
 
 ```sas
 %generate_report(
-    BASE_URI,       /* The base path of the SAS Viya site */
-    table,          /* The table you want to evaluate */
-    caslib,         /* The caslib that the table is located in */
-    provider,       /* The provider of the desired table */
-    server,         /* The server of the provided table */
-    doc_path        /* The directory where you want the report to be stored */
+    BASE_URI,                 /* The base path of the SAS Viya site */
+    table,                    /* The table you want to evaluate */
+    caslib,                   /* The caslib that the table is located in */
+    provider,                 /* The provider of the desired table */
+    server,                   /* The server of the provided table */
+    doc_path                  /* The directory where you want the report to be stored */
+    completeness_threshold,   /* The row has to contain at least this % of values or be flagged */
+    outlier_threshold,        /* The row cannot contain more than this % of outliers or be flagged */
+    mismatch_threshold,       /* The row cannot contain more than this % of mismatched types or be flagged */
 );
 ```
 
@@ -114,12 +117,15 @@ Executes the complete data quality workflow from data import to reporting:
     caslib=caslib,              /* The caslib that you want the table to be located in */
     table=table,                /* The name of the table that you want to create */
     doc_path=path               /* The directory where you want the report to be stored */
+    completeness_threshold=30   /* The row has to contain at least this % of values or be flagged */
+    outlier_threshold=10        /* The row cannot contain more than this % of outliers or be flagged */
+    mismatch_threshold=25       /* The row cannot contain more than this % of mismatched types or be flagged */
 );
 ```
 
 ## Usage Example
 
-The following example demonstrates a complete end-to-end workflow for analyzing a SAS dataset:
+The following example demonstrates a complete end-to-end workflow for analyzing a dataset:
 
 ```sas
 /* Get the current directory path */
@@ -129,17 +135,17 @@ The following example demonstrates a complete end-to-end workflow for analyzing 
 /* Include the Data Quality Module */
 %include "&basepath/eco_dq_v1.sas";
 
-/* Define test file path */
-%let test_file = &basepath/test_files/test.sas7bdat;
-
 /* Run end-to-end workflow */
 %run_e2e(
-    file=&test_file,
+    file=&basepath/test_files/abt_demo.sas7bdat,
     provider=cas,
     server=cas-shared-default,
     caslib=CASUSER(grmelv),
     table=test_e2e_1,
-    doc_path=&basepath/reports
+    doc_path=&basepath/reports,
+    completeness_threshold=30,
+    outlier_threshold=10,
+    mismatch_threshold=25
 );
 ```
 
@@ -161,7 +167,7 @@ The framework generates PDF reports highlighting data quality issues with the fo
 
 ## API Integration
 
-The framework leverages SAS Viya REST APIs for:
+The framework leverages Viya REST APIs for:
 
 - Catalog interaction
 - Bot creation and management
