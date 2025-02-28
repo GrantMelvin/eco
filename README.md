@@ -2,7 +2,7 @@
 
 ## Overview
 
-The ECO Data Quality Framework is a comprehensive SAS-based solution for automating data quality assessment, reporting, and correction workflows. This framework leverages SAS Viya's API to interact with the Information Catalog, perform statistical analysis on datasets, and generate standardized data quality reports.
+The ECO Data Quality Framework is a comprehensive SAS-based solution for automating data quality assessment, reporting, and correction workflows. This framework leverages Viya's API to interact with the Information Catalog, perform statistical analysis on datasets, and generate standardized data quality reports.
 
 ## Key Features
 
@@ -35,7 +35,7 @@ The ECO Data Quality Framework is a comprehensive SAS-based solution for automat
 
 ### Import Data (`%import_data`)
 
-Imports data from various file formats into SAS CAS libraries:
+Imports data from various file formats into CAS libraries:
 
 ```sas
 %import_data(
@@ -47,7 +47,7 @@ Imports data from various file formats into SAS CAS libraries:
 
 ### Run Bots (`%run_bots`)
 
-Creates and executes SAS Information Catalog bots to analyze dataset properties:
+Creates and executes Information Catalog bots to analyze dataset properties:
 
 ```sas
 %run_bots(
@@ -119,7 +119,7 @@ Executes the complete data quality workflow from data import to reporting:
 
 ## Usage Example
 
-The following example demonstrates a complete end-to-end workflow for analyzing a SAS dataset:
+The following example demonstrates a complete end-to-end workflow for analyzing a dataset:
 
 ```sas
 /* Get the current directory path */
@@ -158,7 +158,7 @@ The framework generates PDF reports highlighting data quality issues with the fo
 
 ## API Integration
 
-The framework leverages SAS Viya REST APIs for:
+The framework leverages Viya REST APIs for:
 
 - Catalog interaction
 - Bot creation and management
