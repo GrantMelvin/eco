@@ -1,16 +1,17 @@
 /* Data Quality Module */
 %include "&basepath/../eco_dq_v1.sas";
 
-/* Get the current directory path */
+/* Get the current directory path & URL*/
 %let fullpath = &_SASPROGRAMFILE;
 %let basepath = %substr(&fullpath, 1, %index(&fullpath, e2e_test.sas) - 2);
+%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
 
 /* Test files for analysis */
 %let test_file_1 = &basepath/Test_Files/abt_demo.sas7bdat;
 %let test_file_2 = &basepath/Test_Files/vars_meta_data_in_DEMO.xlsx;
 %let test_file_3 = &basepath/Test_Files/Financial_Sample.xlsx;
 %let test_file_4 = &basepath/Test_Files/all-approved_oncology_drugs.xlsx;
-%let test_file_5 = &basepath/Test_Files/customers-10000.csv;
+%let test_file_5 = &basepath/Test_Files/Diabetes_Missing_Data.csv;
 
 /* Test parameters for analysis */
 %let test_table = test_e2e_5;			/* The name of the table in Information Catalog */
@@ -48,14 +49,13 @@
 	impute_on     	   = the array of variable names that you want to perform imputation on
 	impute_method 	   = the method of imputation that you'd like to use
 */
-%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
 %first_correction(
 	&BASE_URI,
 	&test_table, 
 	&caslib,
 	&provider,
 	&server,
-	deletion_threshold=5,
-	impute_on=PRE_23 PRE_20,
+	deletion_threshold=50,
+	impute_on=Serum_Insulin,
 	impute_method=mean
 );
