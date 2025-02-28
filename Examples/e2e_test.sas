@@ -1,7 +1,7 @@
 /* Get the current directory path & URL*/
 %let fullpath = &_SASPROGRAMFILE;
 %let basepath = %substr(&fullpath, 1, %index(&fullpath, e2e_test.sas) - 2);
-
+%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
 /* Data Quality Module */
 %include "&basepath/../eco_dq_v1.sas";
 
@@ -39,8 +39,8 @@
     table=&test_table,
 	doc_path=&doc_path,
 	completeness_threshold=30,
-	outlier_threshold=5,
-	mismatch_threshold=10
+	outlier_threshold=10,
+	mismatch_threshold=25
 );
 
 

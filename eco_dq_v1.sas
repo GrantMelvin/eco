@@ -404,6 +404,10 @@
     %let outlier_threshold = %sysevalf(&outlier_threshold + 0);
     %let mismatch_threshold = %sysevalf(&mismatch_threshold + 0);
 
+	%put completeness_threshold: &completeness_threshold;
+	%put outlier_threshold: &outlier_threshold;
+	%put mismatch_threshold: &mismatch_threshold;
+
 
     /* Create temporary files for response handling */
     filename resp temp;
@@ -757,14 +761,17 @@
 
 /* Runs the entire script end to end; apart from a first table correction */
 /* Parameters:
-	file	 = the file that you want to upload to caslib and perform analysis on
-	provider = the provider of the desired table
-	server   = the server of the provided table
-	caslib 	 = the caslib that you want the table to be located in
-	table    = the name of the table that you want to create in caslib/information catalog
-	doc_path = the directory where you want the report to be stored
+	file	 			   = The file that you want to upload to caslib and perform analysis on
+	provider 			   = The provider of the desired table
+	server   			   = The server of the provided table
+	caslib 	 			   = The caslib that you want the table to be located in
+	table                  = The name of the table that you want to create in caslib/information catalog
+	doc_path 			   = The directory where you want the report to be stored
+	completeness_threshold = The feature has to contain at least this % of values or be flagged
+	outlier_threshold 	   = The feature cannot contain more than this % of outliers or be flagged
+	mismatch_threshold 	   = The feature cannot contain more than this % of mismatched types or be flagged
 */
-%macro run_e2e(file=file, provider=provider, server=server, caslib=caslib, table=table, doc_path=path, 
+%macro run_e2e(file=file, provider=provider, server=server, caslib=caslib, table=table, doc_path=doc_path, 
 completeness_threshold=completeness_threshold, outlier_threshold=outlier_threshold, mismatch_threshold=mismatch_threshold);
 	%let table=%upcase(&table);
 	%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
@@ -802,8 +809,8 @@ completeness_threshold=completeness_threshold, outlier_threshold=outlier_thresho
 		&BASE_URI,
 		&table,
 		&caslib,
-	 	&encoded_provider,
-		&encoded_server,
+	 	&provider,
+		&server,
 		&doc_path,
 		&completeness_threshold,
 		&outlier_threshold,

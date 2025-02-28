@@ -30,6 +30,6 @@
 	&provider,
 	&server,
 	deletion_threshold=5,
-	impute_on=SHA_39,
+	impute_on=SHA_39 SHA_45,
 	impute_method=mean
 );
