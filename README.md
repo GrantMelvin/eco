@@ -129,12 +129,9 @@ The following example demonstrates a complete end-to-end workflow for analyzing 
 /* Include the Data Quality Module */
 %include "&basepath/eco_dq_v1.sas";
 
-/* Define test file path */
-%let test_file = &basepath/test_files/test.sas7bdat;
-
 /* Run end-to-end workflow */
 %run_e2e(
-    file=&test_file,
+    file=&basepath/test_files/abt_demo.sas7bdat,
     provider=cas,
     server=cas-shared-default,
     caslib=CASUSER(grmelv),
